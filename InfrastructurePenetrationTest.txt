@@ -80,10 +80,46 @@ Enumerate
             When you first catch a reverse shell, it's typically a "dumb" shell without full terminal features — it lacks job control, tab completion, and importantly, commands like su or sudo won't work because they require an interactive TTY to securely read passwords. 
                 Upgrading to a full TTY transforms your basic reverse shell into a proper interactive terminal session, which is necessary because commands like su and sudo require a real terminal (TTY) to safely prompt for and read password input. In this room, this is not required, as we will see later.
 
+    Privilege Escalation
+        Now that we've gotten a foothold on the lab machine, we need to check for ways to escalate our privileges. In the Linux Privilege Escalation: Basics room later in this path, we'll visit privilege escalation enumeration and exploitation techniques. For now, let's try to find interesting files that may help us with our privilege escalation attempts.
+
+            find / -name password* 2>/dev/null
         
+        This command will attempt to find all files on the target system that contain the word password in their name. 2>/dev/null will suppress errors.
+        You can go ahead and inspect all these files, but one stands out from the rest: /etc/password.txt.
+        We can read this with cat /etc/password.txt. Luckily for us, it seems to contain root credentials. Since we're not in an interactive terminal session, we won't be able to use su to enter the password. However, we know from our previous external enumeration that an SSH service is running on this host. 
+        Open a new terminal and run the following command:
+
+            ssh root@10.112.178.63
+            /etc/password.txt
+
+    Reporting 
+        Even though we'll visit the reporting in a later room, some things must still be mentioned.
+        First of all, you should keep in mind that all the client will ever see of your work is your report. You could have the pentest of your life in which you own all the ATMs in a bank and become its domain admin, but if your report is bad, then it means the pentest was bad.
+        Secondly, while all professionals have their own way of writing reports, some general items should always be there:
+            - A cover page with a title, your name, and email address, and version control.
+            - A table of contents (Optional).
+            - An executive summary, aimed at the manager who requested the engagement, explaining what was achieved in non-technical terms.
+            - A technical summary aimed at the engineering manager, so they understand the impact and can prioritize accordingly (Optional).
+            - A table of all vulnerabilities found, ordered by severity, aimed at managers and engineers, again to prioritize accordingly.
+            - Detailed exploitation section, where each vulnerability and its impact are explained, exploitation steps and proof are shown, and recommendations for mitigations are given. This is aimed at engineers who will remediate your findings.
+        
+        Lastly, take pride in what you did. The report is your time to shine and show your client your best work. Don't skip steps and be as detailed as possible to provide the best value for your client.
+        The following example is a reported finding for the privilege escalation vector we've found in this scenario.
+
+        ex :
+            Title: Root Password Stored in Plaintext
+            Severity: Critical
+            Description: The root user's password was found stored in plaintext within the file /etc/password.txt. This file was readable by low-privileged users, allowing any user with shell access to retrieve the root credentials and fully compromise the system.
+            Exploitation Steps:
+                Obtain a low-privileged shell on the target system.
+                Read the contents of /etc/password.txt using cat /etc/password.txt.
+                Use the discovered root password to escalate privileges via ssh root@IP.
+            Recommendation: Remove the plaintext password file immediately and rotate the root password. Credentials should never be stored in plaintext on the filesystem. Implement a secrets management solution or use properly configured system authentication mechanisms (such as /etc/shadow with strong hashing). Additionally, enforce the principle of least privilege to restrict file access permissions.
 
         
-        
-            
+    Infrastructure pentests are the closest thing to what a malicious hacker does. Everything starts from a list of IPs you know nothing about, and it's your job to uncover their secrets and find their weak points.
+    
+
 
 
